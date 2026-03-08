@@ -10,6 +10,11 @@ export interface Note {
   sections: NoteSection[];
   createdAt: number;
   color: string;
+  history?: {
+    sections: NoteSection[];
+    timestamp: number;
+    label: string;
+  }[];
 }
 
 export type ViewMode = 'editor' | 'display';

@@ -1,24 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import { Note, ViewMode } from './types';
 import { StructuredNote } from './components/StructuredNote';
-import { extractNotesFromUrl, refineNotes } from './services/geminiService';
+import { extractNotesFromUrl, refineNotes } from './services/aiService';
 import { motion, AnimatePresence } from 'motion/react';
-import { PenLine, LayoutDashboard, Sparkles, Link as LinkIcon, Loader2, ArrowRight, Trash2, PanelLeftClose, PanelLeftOpen, X, Wand2 } from 'lucide-react';
+import { 
+  PenLine, 
+  LayoutDashboard, 
+  Wind, 
+  Link as LinkIcon, 
+  Loader2, 
+  ArrowRight, 
+  Trash2, 
+  PanelLeftClose, 
+  PanelLeftOpen, 
+  X, 
+  Wand2, 
+  List, 
+  Presentation,
+  Copy,
+  Download,
+  Check
+} from 'lucide-react';
 
 export default function App() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('editor');
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showRefineModal, setShowRefineModal] = useState(false);
   const [customInstruction, setCustomInstruction] = useState('');
   const [isRefining, setIsRefining] = useState(false);
+  const [displayMode, setDisplayMode] = useState<'slides' | 'list'>('list');
+  const [isCopied, setIsCopied] = useState(false);
 
   // Load notes from localStorage on mount
   useEffect(() => {
-    const savedNotes = localStorage.getItem('zenn-notes-v1');
+    const savedNotes = localStorage.getItem('lumina-notes-v2');
     if (savedNotes) {
       try {
         setNotes(JSON.parse(savedNotes));
@@ -30,14 +50,15 @@ export default function App() {
 
   // Save notes to localStorage on change
   useEffect(() => {
-    localStorage.setItem('zenn-notes-v1', JSON.stringify(notes));
+    localStorage.setItem('lumina-notes-v2', JSON.stringify(notes));
   }, [notes]);
 
-  const handleExtract = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleExtract = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!url.trim()) return;
 
     setIsLoading(true);
+    setError(null);
     try {
       const extracted = await extractNotesFromUrl(url);
       const newNote: Note = {
@@ -52,9 +73,9 @@ export default function App() {
       setUrl('');
       setSelectedNoteId(newNote.id);
       setViewMode('display');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Extraction failed', error);
-      alert('Failed to extract notes. Please check the URL and try again.');
+      setError(error.message || 'Failed to extract notes. Please check the URL and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -63,6 +84,36 @@ export default function App() {
   const deleteNote = (id: string) => {
     if (selectedNoteId === id) setSelectedNoteId(null);
     setNotes(notes.filter((n) => n.id !== id));
+  };
+
+  const copyToClipboard = async () => {
+    if (!selectedNote) return;
+    const text = `${selectedNote.title}\n\n` + 
+      selectedNote.sections.map(s => `## ${s.topic}\n${s.points.map(p => `- ${p}`).join('\n')}`).join('\n\n');
+    
+    try {
+      await navigator.clipboard.writeText(text);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy', err);
+    }
+  };
+
+  const downloadNotes = () => {
+    if (!selectedNote) return;
+    const text = `${selectedNote.title}\n\n` + 
+      selectedNote.sections.map(s => `## ${s.topic}\n${s.points.map(p => `- ${p}`).join('\n')}`).join('\n\n');
+    
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${selectedNote.title.replace(/\s+/g, '_')}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const handleRefine = async (instruction: string) => {
@@ -91,14 +142,13 @@ export default function App() {
       <header className="sticky top-0 z-50 bg-[#09090b]/80 backdrop-blur-md border-b border-zinc-800 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-zinc-950 shadow-lg shadow-white/5 overflow-hidden">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 5h14L5 19h14" />
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-white">Zenn</h1>
-            </div>
+            <img 
+              src="https://ais-pre-lcwdjjgyr7w7jqrcgymwrx-127371279467.asia-southeast1.run.app/api/images/61" 
+              alt="zenn logo" 
+              className="w-10 h-10 object-contain rounded-lg"
+              referrerPolicy="no-referrer"
+            />
+            <h1 className="text-2xl font-bold tracking-tight text-white">zenn.</h1>
           </div>
 
           <nav className="flex items-center gap-1 bg-zinc-900 p-1 rounded-xl">
@@ -143,8 +193,18 @@ export default function App() {
                 <LinkIcon size={32} />
               </div>
               <h2 className="text-5xl font-bold text-white mb-6 tracking-tight">Turn any link into notes</h2>
+              <div className="flex items-center justify-center gap-2 mb-12">
+                <span className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-1.5">
+                  <Wind size={10} className="text-white" />
+                  Deep Extraction Active
+                </span>
+                <span className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-1.5">
+                  <Check size={10} className="text-emerald-500" />
+                  Llama 3.3 70B
+                </span>
+              </div>
               <p className="text-zinc-400 text-lg max-w-xl mx-auto mb-12 leading-relaxed">
-                Paste a link to a lecture, article, or educational site. Zenn will extract the core concepts and organize them topic-wise for you.
+                Paste a link to a lecture, article, or educational site. zenn. will extract the core concepts and organize them topic-wise for you.
               </p>
 
               <form onSubmit={handleExtract} className="max-w-2xl mx-auto relative group">
@@ -180,6 +240,41 @@ export default function App() {
                   </button>
                 </div>
               </form>
+
+              {/* Error Message */}
+              <AnimatePresence>
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="max-w-2xl mx-auto mt-6 p-6 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-left"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 bg-rose-500/20 rounded-xl flex items-center justify-center text-rose-500 flex-shrink-0">
+                        <X size={20} />
+                      </div>
+                      <div className="flex-grow">
+                        <h4 className="text-rose-500 font-bold mb-1">Extraction Failed</h4>
+                        <p className="text-sm text-zinc-400 mb-4">
+                          {error}
+                          <br />
+                          <span className="text-xs mt-2 block text-zinc-500">
+                            Potential causes: CORS restrictions, site blocking access, or an invalid URL.
+                          </span>
+                        </p>
+                        <button
+                          onClick={handleExtract}
+                          className="px-4 py-2 bg-rose-500 text-white text-xs font-bold rounded-lg hover:bg-rose-600 transition-colors flex items-center gap-2"
+                        >
+                          <ArrowRight size={14} />
+                          Try Again
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Recent Activity */}
               {notes.length > 0 && (
@@ -268,23 +363,63 @@ export default function App() {
                 <div className="max-w-5xl mx-auto px-6 py-12 h-full">
                   {selectedNote ? (
                     <div className="relative h-full flex flex-col">
-                      <div className="absolute -top-4 -right-4 flex items-center gap-2 z-10">
-                        <button 
-                          onClick={() => setShowRefineModal(true)}
-                          className="p-3 text-zinc-400 hover:text-white transition-colors cursor-pointer bg-zinc-900/50 backdrop-blur-sm rounded-full border border-zinc-800"
-                          title="AI Refine Notes"
-                        >
-                          <Wand2 size={20} />
-                        </button>
-                        <button 
-                          onClick={() => deleteNote(selectedNote.id)}
-                          className="p-3 text-zinc-600 hover:text-rose-500 transition-colors cursor-pointer bg-zinc-900/50 backdrop-blur-sm rounded-full border border-zinc-800"
-                          title="Delete this note"
-                        >
-                          <Trash2 size={20} />
-                        </button>
+                      {/* Action Bar Above Title */}
+                      <div className="flex items-center justify-end gap-2 mb-8 border-b border-zinc-900 pb-4">
+                        <div className="flex items-center bg-zinc-900/50 backdrop-blur-sm rounded-xl border border-zinc-800 p-1">
+                          <button 
+                            onClick={() => setDisplayMode('list')}
+                            className={`p-2 rounded-lg transition-all cursor-pointer flex items-center gap-2 px-3 ${displayMode === 'list' ? 'bg-white text-zinc-950 shadow-sm' : 'text-zinc-500 hover:text-white'}`}
+                            title="List View"
+                          >
+                            <List size={16} />
+                            <span className="text-[10px] font-bold uppercase tracking-wider">List</span>
+                          </button>
+                          <button 
+                            onClick={() => setDisplayMode('slides')}
+                            className={`p-2 rounded-lg transition-all cursor-pointer flex items-center gap-2 px-3 ${displayMode === 'slides' ? 'bg-white text-zinc-950 shadow-sm' : 'text-zinc-500 hover:text-white'}`}
+                            title="Presentation View"
+                          >
+                            <Presentation size={16} />
+                            <span className="text-[10px] font-bold uppercase tracking-wider">Slides</span>
+                          </button>
+                        </div>
+
+                        <div className="h-6 w-[1px] bg-zinc-800 mx-2" />
+
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={copyToClipboard}
+                            className="p-2.5 text-zinc-400 hover:text-white transition-colors cursor-pointer bg-zinc-900/50 backdrop-blur-sm rounded-xl border border-zinc-800 flex items-center gap-2"
+                            title="Copy to clipboard"
+                          >
+                            {isCopied ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
+                          </button>
+                          <button 
+                            onClick={downloadNotes}
+                            className="p-2.5 text-zinc-400 hover:text-white transition-colors cursor-pointer bg-zinc-900/50 backdrop-blur-sm rounded-xl border border-zinc-800"
+                            title="Download as text"
+                          >
+                            <Download size={18} />
+                          </button>
+                          <button 
+                            onClick={() => setShowRefineModal(true)}
+                            className="p-2.5 text-zinc-400 hover:text-white transition-colors cursor-pointer bg-zinc-900/50 backdrop-blur-sm rounded-xl border border-zinc-800 flex items-center gap-2"
+                            title="AI Refine Notes"
+                          >
+                            <Wand2 size={18} />
+                            <span className="text-[10px] font-bold uppercase tracking-wider hidden sm:inline">Refine</span>
+                          </button>
+                          <button 
+                            onClick={() => deleteNote(selectedNote.id)}
+                            className="p-2.5 text-zinc-600 hover:text-rose-500 transition-colors cursor-pointer bg-zinc-900/50 backdrop-blur-sm rounded-xl border border-zinc-800"
+                            title="Delete this note"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
                       </div>
-                      <StructuredNote note={selectedNote} />
+                      
+                      <StructuredNote note={selectedNote} mode={displayMode} />
                     </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center h-full text-zinc-600">
@@ -312,7 +447,7 @@ export default function App() {
       <footer className="bg-[#09090b] border-t border-zinc-900 py-6 px-6 mt-auto">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-zinc-600">
-            &copy; {new Date().getFullYear()} Zenn Notes. Built with precision.
+            &copy; {new Date().getFullYear()} zenn. Studio
           </p>
           <div className="flex items-center gap-6 text-sm font-medium text-zinc-600">
             <a href="#" className="hover:text-white transition-colors">Privacy</a>
@@ -363,10 +498,10 @@ export default function App() {
                   <label className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-3 block">Quick Actions</label>
                   <div className="grid grid-cols-2 gap-3">
                     {[
-                      { label: 'Make it Longer', icon: '📝', instruction: 'Make the notes more detailed and comprehensive, adding more depth to each point.' },
-                      { label: 'Make it Shorter', icon: '✂️', instruction: 'Condense the notes by rephrasing each sentence to be as concise as possible. Ensure ALL factual information and content is retained; do not summarize or omit details. The goal is to reduce reading time while keeping 100% of the information.' },
-                      { label: 'Rephrase Longer', icon: '🔄', instruction: 'Rephrase the notes to be more professional and detailed.' },
-                      { label: 'Rephrase Shorter', icon: '⚡', instruction: 'Rephrase each sentence to be sharp, punchy, and as short as possible without losing any information. Cover 100% of the original content.' },
+                      { label: 'Make it Longer', icon: '📝', instruction: 'Expand every single point with maximum detail. Use the source context to add depth, explanations, and examples. DO NOT summarize.' },
+                      { label: 'Make it Shorter', icon: '✂️', instruction: 'Rephrase the notes to be as concise as possible. CRITICAL: Do not remove any factual information, dates, names, or sections. Keep 100% of the content but use fewer words.' },
+                      { label: 'Rephrase Professional', icon: '🔄', instruction: 'Rephrase the notes to be more professional and detailed, ensuring no information is lost.' },
+                      { label: 'Rephrase Punchy', icon: '⚡', instruction: 'Rephrase each sentence to be sharp and punchy. Cover 100% of the original content without any omissions.' },
                     ].map((opt) => (
                       <button
                         key={opt.label}
@@ -406,7 +541,7 @@ export default function App() {
                     </>
                   ) : (
                     <>
-                      <Sparkles size={20} />
+                      <Wind size={20} />
                       Apply Custom Refinement
                     </>
                   )}
