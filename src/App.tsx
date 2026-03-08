@@ -18,7 +18,7 @@ export default function App() {
 
   // Load notes from localStorage on mount
   useEffect(() => {
-    const savedNotes = localStorage.getItem('lumina-notes-v2');
+    const savedNotes = localStorage.getItem('zenn-notes-v1');
     if (savedNotes) {
       try {
         setNotes(JSON.parse(savedNotes));
@@ -30,7 +30,7 @@ export default function App() {
 
   // Save notes to localStorage on change
   useEffect(() => {
-    localStorage.setItem('lumina-notes-v2', JSON.stringify(notes));
+    localStorage.setItem('zenn-notes-v1', JSON.stringify(notes));
   }, [notes]);
 
   const handleExtract = async (e: React.FormEvent) => {
@@ -90,13 +90,14 @@ export default function App() {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-[#09090b]/80 backdrop-blur-md border-b border-zinc-800 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-zinc-950 shadow-lg shadow-white/5">
-              <Sparkles size={20} />
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-zinc-950 shadow-lg shadow-white/5 overflow-hidden">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 5h14L5 19h14" />
+              </svg>
             </div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight text-white">Lumina</h1>
-              <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-500 -mt-1">Smart Extractor</p>
+              <h1 className="text-xl font-bold tracking-tight text-white">Zenn</h1>
             </div>
           </div>
 
@@ -143,7 +144,7 @@ export default function App() {
               </div>
               <h2 className="text-5xl font-bold text-white mb-6 tracking-tight">Turn any link into notes</h2>
               <p className="text-zinc-400 text-lg max-w-xl mx-auto mb-12 leading-relaxed">
-                Paste a link to a lecture, article, or educational site. Lumina will extract the core concepts and organize them topic-wise for you.
+                Paste a link to a lecture, article, or educational site. Zenn will extract the core concepts and organize them topic-wise for you.
               </p>
 
               <form onSubmit={handleExtract} className="max-w-2xl mx-auto relative group">
@@ -311,7 +312,7 @@ export default function App() {
       <footer className="bg-[#09090b] border-t border-zinc-900 py-6 px-6 mt-auto">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-zinc-600">
-            &copy; {new Date().getFullYear()} Lumina Notes Studio. Built with precision.
+            &copy; {new Date().getFullYear()} Zenn Notes. Built with precision.
           </p>
           <div className="flex items-center gap-6 text-sm font-medium text-zinc-600">
             <a href="#" className="hover:text-white transition-colors">Privacy</a>
